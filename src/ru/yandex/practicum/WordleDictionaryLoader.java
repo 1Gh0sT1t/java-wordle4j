@@ -2,16 +2,14 @@ package ru.yandex.practicum;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.InputStreamReader;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.io.FileInputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
 /*
 этот класс содержит в себе всю рутину по работе с файлами словарей и с кодировками
     ему нужны методы по загрузке списка слов из файла по имени файла
