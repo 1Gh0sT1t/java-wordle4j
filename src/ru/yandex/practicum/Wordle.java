@@ -18,114 +18,125 @@ public class Wordle {
 
     public static void main(String[] args) {
         // имя файла словаря можно менять здесь
-        String dictionaryFile = "words_ru.txt";
+        String dictionaryFileName = "words_ru.txt";
         File logFile = new File("log.txt");
 
-        try (PrintWriter log = new PrintWriter(logFile, "UTF-8")) {
-            log.println("Wordle starting...");
+        try (PrintWriter logWriter = new PrintWriter(logFile, Constants.CHARSET_UTF_8)) {
+            logWriter.println("Wordle starting...");
 
-            WordleDictionaryLoader loader = new WordleDictionaryLoader(log);
-            WordleDictionary dictionary = loader.load(dictionaryFile);
+            WordleDictionaryLoader dictionaryLoader = new WordleDictionaryLoader(logWriter);
+            WordleDictionary dictionary = dictionaryLoader.load(dictionaryFileName);
 
             if (dictionary.size() == 0) {
-                log.println("Словарь пуст после фильтрации. Завершаем.");
+                logWriter.println("Словарь пуст после фильтрации. Завершаем.");
                 System.err.println("Словарь пуст. Проверьте файл словаря.");
                 return;
             }
 
-            WordleGame game = new WordleGame(dictionary, log);
-            playGame(game, log);
+            WordleGame game = new WordleGame(dictionary, logWriter);
+            playGame(game, logWriter);
 
-            log.println("Game finished. Answer: " + game.getAnswer());
+            logWriter.println("Game finished. Answer: " + game.getAnswer());
             System.out.println("Игра окончена. Загаданное слово: " + game.getAnswer());
 
-        } catch (DictionaryLoadException e) {
-            System.err.println("Ошибка при загрузке словаря: " + e.getMessage());
-            e.printStackTrace(System.err);
-        } catch (Exception e) {
+        } catch (DictionaryLoadException loadException) {
+            System.err.println("Ошибка при загрузке словаря: " + loadException.getMessage());
+            loadException.printStackTrace(System.err);
+        } catch (Exception generalException) {
             // глобальный catch: все служебные ошибки в лог
-            try (PrintWriter log = new PrintWriter(logFile, "UTF-8")) {
-                log.println("Unhandled exception: " + e.getMessage());
-                e.printStackTrace(log);
-            } catch (Exception ex) {
-                System.err.println("Не удалось записать лог: " + ex.getMessage());
+            try (PrintWriter emergencyLog = new PrintWriter(logFile, Constants.CHARSET_UTF_8)) {
+                emergencyLog.println("Unhandled exception: " + generalException.getMessage());
+                generalException.printStackTrace(emergencyLog);
+            } catch (Exception logException) {
+                System.err.println("Не удалось записать лог: " + logException.getMessage());
             }
-            System.err.println("Произошла ошибка: " + e.getMessage());
-            e.printStackTrace(System.err);
+            System.err.println("Произошла ошибка: " + generalException.getMessage());
+            generalException.printStackTrace(System.err);
         }
     }
 
-    private static void playGame(WordleGame game, PrintWriter log) {
-        Scanner scanner = new Scanner(System.in, "UTF-8");
+    private static void playGame(WordleGame game, PrintWriter logWriter) {
+        Scanner inputScanner = new Scanner(System.in, Constants.CHARSET_UTF_8);
         System.out.println("Игра Wordle. Угадайте слово из 5 букв. У вас 6 попыток.");
         System.out.println("Введите слово или нажмите Enter для подсказки.");
 
         while (!game.isFinished()) {
             System.out.printf("Осталось попыток: %d. Введите слово: ", game.getRemainingSteps());
-            String line;
+            String inputLine;
+
             try {
-                line = scanner.nextLine();
-            } catch (NoSuchElementException e) {
-                log.println("Ввод завершён извне: " + e.getMessage());
+                inputLine = inputScanner.nextLine();
+            } catch (NoSuchElementException scannerException) {
+                logWriter.println("Ввод завершён извне: " + scannerException.getMessage());
                 break;
             }
 
-            if (line == null) {
+            if (inputLine == null) {
                 break;
             }
 
-            String input = line.strip();
+            String userInput = inputLine.strip();
 
-            if (input.isEmpty()) {
-                // подсказка пользователю
-                try {
-                    String suggestion = game.suggestWord();
-                    if (suggestion == null) {
-                        System.out.println("Нет подходящих слов для подсказки.");
-                        log.println("Нет подходящих слов для подсказки.");
-                    } else {
-                        System.out.println("Подсказка: " + suggestion);
-                        log.println("Выдана подсказка: " + suggestion);
-                    }
-                } catch (Exception e) {
-                    System.out.println("Ошибка при создании подсказки: " + e.getMessage());
-                    log.println("Ошибка при создании подсказки: " + e.getMessage());
-                }
+            if (userInput.isEmpty()) {
+                handleSuggestion(game, logWriter);
                 continue;
             }
 
-            try {
-                String normalized = WordleDictionary.normalize(input);
-                String hint = game.makeMove(normalized);
-                // выводим и логируем ход и подсказку
-                System.out.println(normalized);
-                System.out.println(hint);
-                log.println("Ход: " + normalized + " => " + hint);
-
-            } catch (InvalidWordException e) {
-                System.out.println("Неверный ввод: " + e.getMessage());
-                log.println("Неверный ввод: " + e.getMessage());
-            } catch (WordNotFoundInDictionary e) {
-                System.out.println("Слово не найдено в словаре: " + e.getMessage());
-                log.println("Слово не найдено: " + e.getMessage());
-            } catch (RuntimeException e) {
-                System.out.println("Внутренняя ошибка: " + e.getMessage());
-                log.println("Внутренняя ошибка: " + e.getMessage());
-                e.printStackTrace(log);
-            }
+            handleUserGuess(game, userInput, logWriter);
         }
 
+        printGameResult(game, logWriter);
+        inputScanner.close();
+    }
+
+    private static void handleSuggestion(WordleGame game, PrintWriter logWriter) {
+        try {
+            String suggestion = game.suggestWord();
+            if (suggestion == null) {
+                System.out.println("Нет подходящих слов для подсказки.");
+                logWriter.println("Нет подходящих слов для подсказки.");
+            } else {
+                System.out.println("Подсказка: " + suggestion);
+                logWriter.println("Выдана подсказка: " + suggestion);
+            }
+        } catch (Exception suggestionException) {
+            System.out.println("Ошибка при создании подсказки: " + suggestionException.getMessage());
+            logWriter.println("Ошибка при создании подсказки: " + suggestionException.getMessage());
+        }
+    }
+
+    private static void handleUserGuess(WordleGame game, String userInput, PrintWriter logWriter) {
+        try {
+            String normalizedInput = WordleDictionary.normalize(userInput);
+            String hint = game.makeMove(normalizedInput);
+
+            System.out.println(normalizedInput);
+            System.out.println(hint);
+            logWriter.println("Ход: " + normalizedInput + " => " + hint);
+
+        } catch (InvalidWordException invalidWordException) {
+            System.out.println("Неверный ввод: " + invalidWordException.getMessage());
+            logWriter.println("Неверный ввод: " + invalidWordException.getMessage());
+        } catch (WordNotFoundInDictionary wordNotFoundException) {
+            System.out.println("Слово не найдено в словаре: " + wordNotFoundException.getMessage());
+            logWriter.println("Слово не найдено: " + wordNotFoundException.getMessage());
+        } catch (RuntimeException runtimeException) {
+            System.out.println("Внутренняя ошибка: " + runtimeException.getMessage());
+            logWriter.println("Внутренняя ошибка: " + runtimeException.getMessage());
+            runtimeException.printStackTrace(logWriter);
+        }
+    }
+
+    private static void printGameResult(WordleGame game, PrintWriter logWriter) {
         if (game.isWon()) {
             System.out.println("Поздравляю — вы угадали слово!");
-            log.println("Пользователь выиграл.");
+            logWriter.println("Пользователь выиграл.");
         } else if (game.getRemainingSteps() == 0 && !game.isWon()) {
             System.out.println("К сожалению, попытки закончились.");
             System.out.println("Загаданное слово: " + game.getAnswer());
-            log.println("Пользователь проиграл. Ответ: " + game.getAnswer());
+            logWriter.println("Пользователь проиграл. Ответ: " + game.getAnswer());
         } else {
-            log.println("Игровой цикл завершён досрочно.");
+            logWriter.println("Игровой цикл завершён досрочно.");
         }
-
-        scanner.close();
     }
 }

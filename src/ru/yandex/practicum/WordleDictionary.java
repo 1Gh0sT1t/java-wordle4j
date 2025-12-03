@@ -16,7 +16,7 @@ public class WordleDictionary {
 
     private final List<String> words;
     private final PrintWriter log;
-    private final Random rnd = new Random();
+    private final Random random = new Random();
 
     public WordleDictionary(List<String> words, PrintWriter log) {
         this.words = new ArrayList<>(words);
@@ -28,13 +28,17 @@ public class WordleDictionary {
     }
 
     public boolean contains(String word) {
-        if (word == null) return false;
+        if (word == null) {
+            return false;
+        }
         return words.contains(normalize(word));
     }
 
     public String getRandomWord() {
-        if (words.isEmpty()) return null;
-        return words.get(rnd.nextInt(words.size()));
+        if (words.isEmpty()) {
+            return null;
+        }
+        return words.get(random.nextInt(words.size()));
     }
 
     public List<String> getAllWords() {
@@ -44,13 +48,15 @@ public class WordleDictionary {
     /**
      * Нормализация: trim, toLowerCase, replace ё->е.
      */
-    public static String normalize(String raw) {
-        if (raw == null) return "";
-        String s = raw.trim().toLowerCase();
-        s = s.replace('ё', 'е');
+    public static String normalize(String rawInput) {
+        if (rawInput == null) {
+            return "";
+        }
+        String normalized = rawInput.trim().toLowerCase();
+        normalized = normalized.replace('ё', 'е');
         // если есть пробелы внутри, убрать их
-        s = s.replaceAll("\\s+", "");
-        return s;
+        normalized = normalized.replaceAll("\\s+", "");
+        return normalized;
     }
 
     //Фильтрует список кандидатов слов, которые соответствуют истории ходов.
@@ -63,14 +69,16 @@ public class WordleDictionary {
         }
         List<String> candidates = new ArrayList<>(words);
 
-        for (int i = 0; i < historyGuesses.size(); i++) {
-            String guess = historyGuesses.get(i);
-            String hint = historyHints.get(i);
+        for (int moveIndex = 0; moveIndex < historyGuesses.size(); moveIndex++) {
+            String guess = historyGuesses.get(moveIndex);
+            String hint = historyHints.get(moveIndex);
             candidates = candidates.stream()
                     .filter(word -> isConsistent(word, guess, hint))
                     .collect(Collectors.toList());
             if (candidates.isEmpty()) {
-                if (log != null) log.println("В процессе фильтрации не осталось кандидатов после шага " + (i + 1));
+                if (log != null) {
+                    log.println("В процессе фильтрации не осталось кандидатов после шага " + (moveIndex + 1));
+                }
                 break;
             }
         }
@@ -80,8 +88,8 @@ public class WordleDictionary {
     //Проверяет, соответствует ли candidate подсказке hint для угадываемого слова,
     //если был сделан ход guess.
 
-    private boolean isConsistent(String candidate, String guess, String hint) {
-        String expected = WordleGame.compareWords(candidate, guess);
-        return expected.equals(hint);
+    private boolean isConsistent(String candidateWord, String guessedWord, String hint) {
+        String expectedHint = WordleGame.compareWords(candidateWord, guessedWord);
+        return expectedHint.equals(hint);
     }
 }

@@ -24,39 +24,48 @@ public class WordleDictionaryLoader {
     }
 
     public WordleDictionary load(String fileName) throws DictionaryLoadException {
-        File file = new File(fileName);
-        if (!file.exists()) {
-            String msg = "Файл словаря не найден: " + fileName;
-            if (log != null) log.println(msg);
-            throw new DictionaryLoadException(msg);
+        File dictionaryFile = new File(fileName);
+        if (!dictionaryFile.exists()) {
+            String errorMessage = "Файл словаря не найден: " + fileName;
+            if (log != null) {
+                log.println(errorMessage);
+            }
+            throw new DictionaryLoadException(errorMessage);
         }
 
-        List<String> words = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+        List<String> loadedWords = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(dictionaryFile), StandardCharsets.UTF_8))) {
 
             String line;
-            while ((line = br.readLine()) != null) {
-                if (line.isBlank()) continue;
-                String n = WordleDictionary.normalize(line);
-                if (n.length() == 5) {
-                    words.add(n);
+            while ((line = reader.readLine()) != null) {
+                String normalizedWord = WordleDictionary.normalize(line);
+                if (normalizedWord.length() == Constants.WORD_LENGTH) {
+                    loadedWords.add(normalizedWord);
                 }
             }
 
-            if (words.isEmpty()) {
-                String msg = "После фильтрации словарь пуст.";
-                if (log != null) log.println(msg);
-                throw new DictionaryLoadException(msg);
+            if (loadedWords.isEmpty()) {
+                String errorMessage = "После фильтрации словарь пуст.";
+                if (log != null) {
+                    log.println(errorMessage);
+                }
+                throw new DictionaryLoadException(errorMessage);
             }
 
-            if (log != null) log.println("Словарь загружен. Всего слов: " + words.size());
-            return new WordleDictionary(words, log);
+            if (log != null) {
+                log.println("Словарь загружен. Всего слов: " + loadedWords.size());
+            }
 
-        } catch (IOException e) {
-            String msg = "Ошибка чтения файла словаря: " + e.getMessage();
-            if (log != null) log.println(msg);
-            throw new DictionaryLoadException(msg, e);
+            return new WordleDictionary(loadedWords, log);
+
+        } catch (IOException ioException) {
+            String errorMessage = "Ошибка чтения файла словаря: " + ioException.getMessage();
+            if (log != null) {
+                log.println(errorMessage);
+            }
+            throw new DictionaryLoadException(errorMessage, ioException);
         }
     }
 }
