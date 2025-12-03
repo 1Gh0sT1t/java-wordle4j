@@ -1,0 +1,18 @@
+Wordle starting...
+Словарь загружен. Всего слов: 4166
+Answer selected (hidden): снедь
+makeMove: guess=бабка hint=----- remaining=5
+Ход: бабка => -----
+makeMove: guess=жизнь hint=---^+ remaining=4
+Ход: жизнь => ---^+
+makeMove: guess=чурка hint=----- remaining=3
+Ход: чурка => -----
+makeMove: guess=время hint=--+-- remaining=2
+Ход: время => --+--
+Слово не найдено: Слово не найдено в словаре: крень
+makeMove: guess=осень hint=-^+^+ remaining=1
+Ход: осень => -^+^+
+makeMove: guess=снедь hint=+++++ remaining=0
+Ход: снедь => +++++
+Пользователь выиграл.
+Game finished. Answer: снедь
